@@ -1,0 +1,14 @@
+node_modules
+
+# amplify
+.amplify/
+aws-exports.json.backup
+amplify/.config/local-*
+
+# Environment files
+.env
+.env.local
+
+# OS / IDE
+.DS_Store
+.vscode/
