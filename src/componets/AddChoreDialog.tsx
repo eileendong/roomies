@@ -1,34 +1,14 @@
 import { useState } from "react";
-import { Chore, Frequency, Roommate } from "../App";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "./ui/dialog";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Textarea } from "./ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
-import { Calendar } from "./ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { Avatar, AvatarFallback } from "./ui/avatar";
-import { CalendarIcon, X } from "lucide-react";
-import { format } from "date-fns";
+import type { Chore, Frequency, Roommate } from "../App"; // type-only to avoid runtime import cycle
+import { Calendar as CalendarIcon } from "lucide-react";
 
 interface AddChoreDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   roommates: Roommate[];
-  onAddChore: (chore: Omit<Chore, "id" | "completed" | "completions">) => void;
+  onAddChore: (
+    chore: Omit<Chore, "id" | "completed" | "completions" | "reactions" | "comments">
+  ) => void;
 }
 
 export function AddChoreDialog({
@@ -40,37 +20,45 @@ export function AddChoreDialog({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [frequency, setFrequency] = useState<Frequency>("once");
-  const [dueDate, setDueDate] = useState<Date>(new Date());
+  const [dueDateStr, setDueDateStr] = useState<string>(() =>
+    new Date().toISOString().slice(0, 10)
+  );
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [points, setPoints] = useState("10");
   const [enableRotation, setEnableRotation] = useState(false);
   const [category, setCategory] = useState("cleaning");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    if (!title || selectedAssignees.length === 0) {
-      return;
-    }
 
-    const newChore: Omit<Chore, "id" | "completed" | "completions" | "reactions" | "comments"> = {
+    if (!title || selectedAssignees.length === 0 || !dueDateStr) return;
+
+    const dueDate = new Date(dueDateStr);
+
+    const newChore: Omit<
+      Chore,
+      "id" | "completed" | "completions" | "reactions" | "comments"
+    > = {
       title,
       description,
       frequency,
       dueDate,
       assignees: selectedAssignees,
-      points: parseInt(points) || 0,
-      rotationOrder: enableRotation && selectedAssignees.length > 1 ? selectedAssignees : undefined,
+      points: parseInt(points || "0", 10),
+      rotationOrder:
+        frequency !== "once" && selectedAssignees.length > 1 && enableRotation
+          ? selectedAssignees
+          : undefined,
       category,
     };
 
     onAddChore(newChore);
-    
-    // Reset form
+
+    // Reset
     setTitle("");
     setDescription("");
     setFrequency("once");
-    setDueDate(new Date());
+    setDueDateStr(new Date().toISOString().slice(0, 10));
     setSelectedAssignees([]);
     setPoints("10");
     setEnableRotation(false);
@@ -79,30 +67,40 @@ export function AddChoreDialog({
   };
 
   const toggleAssignee = (roommateId: string) => {
-    setSelectedAssignees(prev => {
-      if (prev.includes(roommateId)) {
-        return prev.filter(id => id !== roommateId);
-      }
-      return [...prev, roommateId];
-    });
+    setSelectedAssignees((prev) =>
+      prev.includes(roommateId)
+        ? prev.filter((id) => id !== roommateId)
+        : [...prev, roommateId]
+    );
   };
 
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Add New Chore</DialogTitle>
-          <DialogDescription>
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* backdrop */}
+      <div
+        className="absolute inset-0 bg-black/40"
+        onClick={() => onOpenChange(false)}
+      />
+      {/* dialog */}
+      <div className="relative z-10 w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl bg-white p-5 shadow-xl">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-slate-900">Add New Chore</h2>
+          <p className="text-slate-600 text-sm">
             Create a new household task and assign it to roommates
-          </DialogDescription>
-        </DialogHeader>
-        
+          </p>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Title */}
           <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
-            <Input
+            <label htmlFor="title" className="text-sm font-medium text-slate-700">
+              Title *
+            </label>
+            <input
               id="title"
+              className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g., Take out trash"
@@ -112,9 +110,15 @@ export function AddChoreDialog({
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
+            <label
+              htmlFor="description"
+              className="text-sm font-medium text-slate-700"
+            >
+              Description
+            </label>
+            <textarea
               id="description"
+              className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Add details about this chore..."
@@ -122,148 +126,150 @@ export function AddChoreDialog({
             />
           </div>
 
-          {/* Category, Frequency and Due Date */}
-          <div className="grid grid-cols-3 gap-4">
+          {/* Category / Frequency / Due Date */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger id="category">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cleaning">Cleaning</SelectItem>
-                  <SelectItem value="kitchen">Kitchen</SelectItem>
-                  <SelectItem value="plants">Plants</SelectItem>
-                  <SelectItem value="shopping">Shopping</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
+              <label htmlFor="category" className="text-sm font-medium text-slate-700">
+                Category
+              </label>
+              <select
+                id="category"
+                className="w-full rounded border border-slate-300 px-3 py-2 text-sm bg-white"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              >
+                <option value="cleaning">Cleaning</option>
+                <option value="kitchen">Kitchen</option>
+                <option value="plants">Plants</option>
+                <option value="shopping">Shopping</option>
+                
+                <option value="other">Other</option>
+              </select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="frequency">Frequency</Label>
-              <Select value={frequency} onValueChange={(v) => setFrequency(v as Frequency)}>
-                <SelectTrigger id="frequency">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="once">Once</SelectItem>
-                  <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                </SelectContent>
-              </Select>
+              <label htmlFor="frequency" className="text-sm font-medium text-slate-700">
+                Frequency
+              </label>
+              <select
+                id="frequency"
+                className="w-full rounded border border-slate-300 px-3 py-2 text-sm bg-white"
+                value={frequency}
+                onChange={(e) => setFrequency(e.target.value as Frequency)}
+              >
+                <option value="once">Once</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
             </div>
 
             <div className="space-y-2">
-              <Label>Due Date *</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(dueDate, "PPP")}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={dueDate}
-                    onSelect={(date) => date && setDueDate(date)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <label htmlFor="due" className="text-sm font-medium text-slate-700">
+                Due Date *
+              </label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+                  <CalendarIcon className="h-4 w-4 text-slate-500" />
+                </span>
+                <input
+                  id="due"
+                  type="date"
+                  className="w-full rounded border border-slate-300 pl-9 pr-3 py-2 text-sm"
+                  value={dueDateStr}
+                  onChange={(e) => setDueDateStr(e.target.value)}
+                  required
+                />
+              </div>
             </div>
           </div>
 
           {/* Points */}
           <div className="space-y-2">
-            <Label htmlFor="points">Points (optional)</Label>
-            <Input
+            <label htmlFor="points" className="text-sm font-medium text-slate-700">
+              Points (optional)
+            </label>
+            <input
               id="points"
               type="number"
+              className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
               value={points}
               onChange={(e) => setPoints(e.target.value)}
               placeholder="10"
-              min="0"
+              min={0}
             />
           </div>
 
           {/* Assignees */}
           <div className="space-y-2">
-            <Label>Assign To *</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {roommates.map((roommate) => (
-                <button
-                  key={roommate.id}
-                  type="button"
-                  onClick={() => toggleAssignee(roommate.id)}
-                  className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all ${
-                    selectedAssignees.includes(roommate.id)
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
-                >
-                  <Avatar
-                    className="h-8 w-8"
-                    style={{ backgroundColor: roommate.color }}
+            <div className="text-sm font-medium text-slate-700">Assign To *</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {roommates.map((roommate) => {
+                const selected = selectedAssignees.includes(roommate.id);
+                return (
+                  <button
+                    key={roommate.id}
+                    type="button"
+                    onClick={() => toggleAssignee(roommate.id)}
+                    className={`flex items-center gap-3 rounded-lg border-2 p-3 transition-all ${
+                      selected
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-slate-200 bg-white hover:border-slate-300"
+                    }`}
                   >
-                    <AvatarFallback className="text-white">
+                    <div
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-white text-sm font-medium"
+                      style={{ backgroundColor: roommate.color }}
+                      title={roommate.name}
+                    >
                       {roommate.avatar}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-slate-900">{roommate.name}</span>
-                  {selectedAssignees.includes(roommate.id) && (
-                    <div className="ml-auto">
-                      <div className="h-5 w-5 rounded-full bg-blue-500 text-white flex items-center justify-center">
-                        ✓
-                      </div>
                     </div>
-                  )}
-                </button>
-              ))}
+                    <span className="text-slate-900">{roommate.name}</span>
+                    {selected && (
+                      <span className="ml-auto inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-white">
+                        ✓
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Rotation Toggle */}
           {frequency !== "once" && selectedAssignees.length > 1 && (
-            <div className="space-y-2">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={enableRotation}
-                  onChange={(e) => setEnableRotation(e.target.checked)}
-                  className="rounded border-slate-300"
-                />
-                <span className="text-sm text-slate-700">
-                  Enable automatic rotation (assign to next person after completion)
-                </span>
-              </label>
-            </div>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={enableRotation}
+                onChange={(e) => setEnableRotation(e.target.checked)}
+                className="rounded border-slate-300"
+              />
+              <span className="text-sm text-slate-700">
+                Enable automatic rotation (assign to next person after completion)
+              </span>
+            </label>
           )}
 
           {/* Actions */}
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button
+          <div className="mt-2 flex justify-end gap-2 border-t pt-4">
+            <button
               type="button"
-              variant="outline"
+              className="rounded border px-3 py-2 text-sm"
               onClick={() => onOpenChange(false)}
             >
               Cancel
-            </Button>
-            <Button
+            </button>
+            <button
               type="submit"
-              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white"
               disabled={!title || selectedAssignees.length === 0}
+              className="rounded bg-indigo-600 px-3 py-2 text-sm text-white hover:bg-indigo-700 disabled:opacity-50"
             >
               Add Chore
-            </Button>
+            </button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
