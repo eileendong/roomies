@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { Chore, Roommate } from "../App";
+import React from "react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "./ui/dialog";
-import { Button } from "./ui/button";
-import { Avatar, AvatarFallback } from "./ui/avatar";
-import { motion, AnimatePresence } from "motion/react";
+} from "../ui/dialog";
+import { Button } from "../ui/button";
+import { Avatar, AvatarFallback } from "../ui/avatar";
+import { motion, AnimatePresence } from "framer-motion";
 import { Shuffle, Sparkles } from "lucide-react";
 
 interface RandomSpinnerProps {

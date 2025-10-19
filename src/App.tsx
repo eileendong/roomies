@@ -3,12 +3,12 @@
 import * as React from "react";
 import { useState, useEffect, useMemo } from "react";
 
-import { AddChoreDialog } from "./componets/AddChoreDialog";
-import { ChoreDetailDrawer } from "./componets/ChoreDetailDrawer";
-import { Leaderboard } from "./componets/LeaderBoard";      // file is LeaderBoard.tsx
-import { Dashboard } from "./componets/Dashboard";
-import { RandomSpinner } from "./componets/Randomspinner";   // file is Randomspinner.tsx
-import { WeeklySummary } from "./componets/WeeklySummary";
+import { AddChoreDialog } from "./components/AddChoreDialog";
+import { ChoreDetailDrawer } from "./components/ChoreDetailDrawer";
+import { Leaderboard } from "./components/LeaderBoard";      // file is LeaderBoard.tsx
+import { Dashboard } from "./components/Dashboard";
+import { RandomSpinner } from "./components/RandomSpinner";
+import { WeeklySummary } from "./components/WeeklySummary";
 
 import {
   Plus,
@@ -19,6 +19,10 @@ import {
   Flame,
   Zap,
   TrendingUp,
+  Calendar,
+  Repeat,
+  Users,
+  MessageCircle,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 
@@ -675,6 +679,144 @@ export default function App() {
             </button>
           </div>
         </div>
+
+        {/* Chores List */}
+        <div className="space-y-4">
+          {filteredChores.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                <Target className="h-8 w-8 text-slate-400" />
+              </div>
+              <h3 className="text-slate-900 mb-2">No chores found</h3>
+              <p className="text-slate-600 mb-4">
+                {statusTab === "mine" 
+                  ? "You don't have any assigned chores right now." 
+                  : statusTab === "overdue"
+                  ? "No overdue chores! Great job keeping up."
+                  : "No chores match your current filters."}
+              </p>
+              <button
+                onClick={() => setIsAddDialogOpen(true)}
+                className="text-sm px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                <span className="inline-flex items-center">
+                  <Plus className="h-4 w-4 mr-1" /> Add Your First Chore
+                </span>
+              </button>
+            </div>
+          ) : (
+            filteredChores.map((chore) => {
+              const assignedRoommates = roommates.filter((r) => chore.assignees.includes(r.id));
+              const isOverdue = now && new Date(chore.dueDate) < now && !chore.completed;
+              const isMine = chore.assignees.includes(currentUser);
+              
+              return (
+                <div
+                  key={chore.id}
+                  onClick={() => setSelectedChore(chore)}
+                  className="bg-white rounded-xl p-6 border border-slate-200 hover:border-slate-300 cursor-pointer transition-all hover:shadow-md"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-lg text-slate-900 font-medium">{chore.title}</h3>
+                        {chore.completed && (
+                          <div className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium">
+                            ✓ Completed
+                          </div>
+                        )}
+                        {isOverdue && !chore.completed && (
+                          <div className="px-2 py-1 rounded-full bg-red-100 text-red-700 text-xs font-medium">
+                            Overdue
+                          </div>
+                        )}
+                        {isMine && (
+                          <div className="px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
+                            My Task
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-slate-600 mb-3">{chore.description}</p>
+                      
+                      <div className="flex items-center gap-4 text-sm text-slate-500">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          <span>
+                            Due {chore.dueDate.toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Repeat className="h-4 w-4" />
+                          <span className="capitalize">{chore.frequency}</span>
+                        </div>
+                        {chore.points > 0 && (
+                          <div className="flex items-center gap-1">
+                            <Zap className="h-4 w-4 fill-amber-500 text-amber-500" />
+                            <span>{chore.points} pts</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-slate-400" />
+                      <div className="flex -space-x-2">
+                        {assignedRoommates.slice(0, 3).map((roommate, idx) => {
+                          const color = ["#4f46e5", "#0ea5e9", "#22c55e", "#f59e0b", "#a855f7", "#ef4444"][idx % 6];
+                          const initial = roommate.name.charAt(0).toUpperCase();
+                          return (
+                            <div
+                              key={roommate.id}
+                              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium border-2 border-white"
+                              style={{ backgroundColor: color }}
+                              title={roommate.name}
+                            >
+                              {initial}
+                            </div>
+                          );
+                        })}
+                        {assignedRoommates.length > 3 && (
+                          <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 text-xs font-medium border-2 border-white">
+                            +{assignedRoommates.length - 3}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      {chore.reactions.length > 0 && (
+                        <div className="flex items-center gap-1 text-sm">
+                          {Object.entries(
+                            chore.reactions.reduce((acc, r) => {
+                              acc[r.emoji] = (acc[r.emoji] || 0) + 1;
+                              return acc;
+                            }, {} as Record<string, number>)
+                          ).slice(0, 3).map(([emoji, count]) => (
+                            <span key={emoji} className="text-sm">
+                              {emoji} {count > 1 && count}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {chore.comments.length > 0 && (
+                        <div className="flex items-center gap-1 text-slate-500 text-sm">
+                          <MessageCircle className="h-4 w-4" />
+                          <span>{chore.comments.length}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
 
         {/* Add Chore Dialog */}
         <AddChoreDialog

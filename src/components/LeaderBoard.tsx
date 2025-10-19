@@ -1,17 +1,18 @@
 import { Chore, Roommate } from "../App";
+import React from "react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "./ui/dialog";
-import { Avatar, AvatarFallback } from "./ui/avatar";
-import { Badge } from "./ui/badge";
-import { Separator } from "./ui/separator";
-import { Progress } from "./ui/progress";
+} from "../ui/dialog";
+import { Avatar, AvatarFallback } from "../ui/avatar";
+import { Badge } from "../ui/badge";
+import { Separator } from "../ui/separator";
+import { Progress } from "../ui/progress";
 import { Trophy, Zap, CheckCircle2, TrendingUp, Award, Flame } from "lucide-react";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 
 interface LeaderboardProps {
   chores: Chore[];
@@ -212,15 +213,21 @@ export function Leaderboard({ chores, roommates, open, onOpenChange }: Leaderboa
                         <h4 className="text-slate-900">{stat.roommate.name}</h4>
                         {stat.roommate.badges.length > 0 && (
                           <div className="flex gap-1">
-                            {stat.roommate.badges.slice(0, 3).map((badge, i) => (
-                              <div key={i} className="text-sm" title={badge}>
-                                {badge === "plant-whisperer" && "🌿"}
-                                {badge === "early-bird" && "🌅"}
-                                {badge === "streak-master" && "🔥"}
-                                {badge === "clean-freak" && "✨"}
-                                {badge === "team-player" && "🤝"}
-                              </div>
-                            ))}
+                            {stat.roommate.badges.slice(0, 3).map((badge, i) => {
+                              const badgeEmojis: Record<string, string> = {
+                                "plant-whisperer": "🌿",
+                                "early-bird": "🌅",
+                                "streak-master": "🔥",
+                                "clean-freak": "✨",
+                                "team-player": "🤝",
+                                "newbie": "🌟"
+                              };
+                              return (
+                                <div key={i} className="text-sm" title={badge}>
+                                  {badgeEmojis[badge] || "🏆"}
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                       </div>

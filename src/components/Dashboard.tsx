@@ -1,16 +1,22 @@
-import { Chore, Roommate } from "../App";
+import React from "react";
+import type { Chore, Roommate } from "../App";
+
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "./ui/dialog";
-import { Avatar, AvatarFallback } from "./ui/avatar";
-import { Badge } from "./ui/badge";
-import { Progress } from "./ui/progress";
-import { Separator } from "./ui/separator";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+} from "../ui/dialog";
+import { Avatar, AvatarFallback } from "../ui/avatar";
+import { Badge } from "../ui/badge";
+import { Progress } from "../ui/progress";
+import { Separator } from "../ui/separator";
+
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
+} from "recharts";
+
 import { Calendar, TrendingUp, Zap, Award, Target, Flame } from "lucide-react";
 
 interface DashboardProps {
@@ -98,7 +104,8 @@ export function Dashboard({ chores, roommates, currentUser, open, onOpenChange }
     if (chore.category) {
       chore.completions.forEach(comp => {
         if (comp.completedBy === currentUser) {
-          categoryData[chore.category] = (categoryData[chore.category] || 0) + comp.points;
+          const category = chore.category!;
+          categoryData[category] = (categoryData[category] || 0) + comp.points;
         }
       });
     }

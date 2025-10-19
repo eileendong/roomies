@@ -1,6 +1,10 @@
-import { useState } from "react";
-import type { Chore, Frequency, Roommate } from "../App"; // type-only to avoid runtime import cycle
+import { useId, useState } from "react";
+import type { Chore, Frequency, Roommate } from "../App";
 import { Calendar as CalendarIcon } from "lucide-react";
+import React from "react";
+import type { JSX } from "react";
+
+
 
 interface AddChoreDialogProps {
   open: boolean;
@@ -16,7 +20,7 @@ export function AddChoreDialog({
   onOpenChange,
   roommates,
   onAddChore,
-}: AddChoreDialogProps) {
+}: AddChoreDialogProps): JSX.Element | null {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [frequency, setFrequency] = useState<Frequency>("once");
@@ -28,9 +32,21 @@ export function AddChoreDialog({
   const [enableRotation, setEnableRotation] = useState(false);
   const [category, setCategory] = useState("cleaning");
 
+  // Accessible ids for the dialog title/description
+  const titleId = useId();
+  const descId = useId();
+  const assigneesGroupId = useId();
+
+  const toggleAssignee = (roommateId: string) => {
+    setSelectedAssignees((prev) =>
+      prev.includes(roommateId)
+        ? prev.filter((id) => id !== roommateId)
+        : [...prev, roommateId]
+    );
+  };
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     if (!title || selectedAssignees.length === 0 || !dueDateStr) return;
 
     const dueDate = new Date(dueDateStr);
@@ -42,9 +58,9 @@ export function AddChoreDialog({
       title,
       description,
       frequency,
-      dueDate,
+      dueDate, // if your model prefers string: use dueDateStr
       assignees: selectedAssignees,
-      points: parseInt(points || "0", 10),
+      points: Number.isNaN(parseInt(points, 10)) ? 0 : parseInt(points, 10),
       rotationOrder:
         frequency !== "once" && selectedAssignees.length > 1 && enableRotation
           ? selectedAssignees
@@ -66,58 +82,61 @@ export function AddChoreDialog({
     onOpenChange(false);
   };
 
-  const toggleAssignee = (roommateId: string) => {
-    setSelectedAssignees((prev) =>
-      prev.includes(roommateId)
-        ? prev.filter((id) => id !== roommateId)
-        : [...prev, roommateId]
-    );
-  };
-
   if (!open) return null;
+
+  const badgeColors = ["#4f46e5", "#0ea5e9", "#22c55e", "#f59e0b", "#a855f7", "#ef4444"];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* backdrop */}
-      <div
+      {/* backdrop as a real button for a11y */}
+      <button
+        type="button"
+        aria-label="Close"
         className="absolute inset-0 bg-black/40"
         onClick={() => onOpenChange(false)}
       />
       {/* dialog */}
-      <div className="relative z-10 w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl bg-white p-5 shadow-xl">
+      <div
+        className="relative z-10 w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl bg-white p-5 shadow-xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descId}
+      >
         <div className="mb-4">
-          <h2 className="text-lg font-semibold text-slate-900">Add New Chore</h2>
-          <p className="text-slate-600 text-sm">
-            Create a new household task and assign it to roommates
+          <h2 id={titleId} className="text-lg font-semibold text-slate-900">
+            Add New Chore
+          </h2>
+          <p id={descId} className="text-slate-600 text-sm">
+            Create a new household task and assign it to roommates.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" noValidate>
           {/* Title */}
           <div className="space-y-2">
-            <label htmlFor="title" className="text-sm font-medium text-slate-700">
-              Title *
+            <label htmlFor="chore-title" className="text-sm font-medium text-slate-700">
+              Title <span aria-hidden="true">*</span>
             </label>
             <input
-              id="title"
+              id="chore-title"
               className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g., Take out trash"
               required
+              aria-required="true"
+              aria-invalid={!title ? "true" : "false"}
             />
           </div>
 
           {/* Description */}
           <div className="space-y-2">
-            <label
-              htmlFor="description"
-              className="text-sm font-medium text-slate-700"
-            >
+            <label htmlFor="chore-desc" className="text-sm font-medium text-slate-700">
               Description
             </label>
             <textarea
-              id="description"
+              id="chore-desc"
               className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -129,11 +148,11 @@ export function AddChoreDialog({
           {/* Category / Frequency / Due Date */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <label htmlFor="category" className="text-sm font-medium text-slate-700">
+              <label htmlFor="chore-category" className="text-sm font-medium text-slate-700">
                 Category
               </label>
               <select
-                id="category"
+                id="chore-category"
                 className="w-full rounded border border-slate-300 px-3 py-2 text-sm bg-white"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
@@ -142,17 +161,16 @@ export function AddChoreDialog({
                 <option value="kitchen">Kitchen</option>
                 <option value="plants">Plants</option>
                 <option value="shopping">Shopping</option>
-                
                 <option value="other">Other</option>
               </select>
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="frequency" className="text-sm font-medium text-slate-700">
+              <label htmlFor="chore-frequency" className="text-sm font-medium text-slate-700">
                 Frequency
               </label>
               <select
-                id="frequency"
+                id="chore-frequency"
                 className="w-full rounded border border-slate-300 px-3 py-2 text-sm bg-white"
                 value={frequency}
                 onChange={(e) => setFrequency(e.target.value as Frequency)}
@@ -165,20 +183,22 @@ export function AddChoreDialog({
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="due" className="text-sm font-medium text-slate-700">
-                Due Date *
+              <label htmlFor="chore-due" className="text-sm font-medium text-slate-700">
+                Due Date <span aria-hidden="true">*</span>
               </label>
               <div className="relative">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
-                  <CalendarIcon className="h-4 w-4 text-slate-500" />
+                  <CalendarIcon className="h-4 w-4 text-slate-500" aria-hidden="true" />
                 </span>
                 <input
-                  id="due"
+                  id="chore-due"
                   type="date"
                   className="w-full rounded border border-slate-300 pl-9 pr-3 py-2 text-sm"
                   value={dueDateStr}
                   onChange={(e) => setDueDateStr(e.target.value)}
                   required
+                  aria-required="true"
+                  aria-invalid={!dueDateStr ? "true" : "false"}
                 />
               </div>
             </div>
@@ -186,31 +206,48 @@ export function AddChoreDialog({
 
           {/* Points */}
           <div className="space-y-2">
-            <label htmlFor="points" className="text-sm font-medium text-slate-700">
+            <label htmlFor="chore-points" className="text-sm font-medium text-slate-700">
               Points (optional)
             </label>
             <input
-              id="points"
+              id="chore-points"
               type="number"
               className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
               value={points}
               onChange={(e) => setPoints(e.target.value)}
               placeholder="10"
               min={0}
+              inputMode="numeric"
+              pattern="[0-9]*"
             />
           </div>
 
           {/* Assignees */}
           <div className="space-y-2">
-            <div className="text-sm font-medium text-slate-700">Assign To *</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {roommates.map((roommate) => {
+            <div id={assigneesGroupId} className="text-sm font-medium text-slate-700">
+              Assign To <span aria-hidden="true">*</span>
+            </div>
+            <div
+              role="group"
+              aria-labelledby={assigneesGroupId}
+              aria-required="true"
+              aria-invalid={selectedAssignees.length === 0 ? "true" : "false"}
+              className="grid grid-cols-1 sm:grid-cols-2 gap-2"
+            >
+              {roommates.map((roommate, idx) => {
                 const selected = selectedAssignees.includes(roommate.id);
+                const initial =
+                  (roommate.name ?? "?").trim().charAt(0).toUpperCase() || "?";
+                const color = badgeColors[idx % badgeColors.length];
+
                 return (
                   <button
                     key={roommate.id}
                     type="button"
                     onClick={() => toggleAssignee(roommate.id)}
+                    role="checkbox"
+                    aria-checked={selected}
+                    aria-label={`Assign ${roommate.name}`}
                     className={`flex items-center gap-3 rounded-lg border-2 p-3 transition-all ${
                       selected
                         ? "border-blue-500 bg-blue-50"
@@ -219,14 +256,17 @@ export function AddChoreDialog({
                   >
                     <div
                       className="flex h-8 w-8 items-center justify-center rounded-full text-white text-sm font-medium"
-                      style={{ backgroundColor: roommate.color }}
+                      style={{ backgroundColor: color }}
                       title={roommate.name}
                     >
-                      {roommate.avatar}
+                      {initial}
                     </div>
                     <span className="text-slate-900">{roommate.name}</span>
                     {selected && (
-                      <span className="ml-auto inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-white">
+                      <span
+                        className="ml-auto inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-white"
+                        aria-hidden="true"
+                      >
                         ✓
                       </span>
                     )}

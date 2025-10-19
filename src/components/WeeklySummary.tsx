@@ -1,14 +1,15 @@
 import { Chore, Roommate } from "../App";
+import React from "react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "./ui/dialog";
-import { Badge } from "./ui/badge";
-import { Separator } from "./ui/separator";
-import { Progress } from "./ui/progress";
+} from "../ui/dialog";
+import { Badge } from "../ui/badge";
+import { Separator } from "../ui/separator";
+import { Progress } from "../ui/progress";
 import { Sparkles, TrendingUp, TrendingDown, Award, AlertTriangle } from "lucide-react";
 
 interface WeeklySummaryProps {
