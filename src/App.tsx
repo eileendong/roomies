@@ -1,3 +1,5 @@
+\"use client";
+
 import { useState } from "react";
 import { ChoreList } from "./components/ChoreList";
 import { AddChoreDialog } from "./components/AddChoreDialog";
@@ -6,11 +8,8 @@ import { Leaderboard } from "./components/Leaderboard";
 import { Dashboard } from "./components/Dashboard";
 import { RandomSpinner } from "./components/RandomSpinner";
 import { WeeklySummary } from "./components/WeeklySummary";
-import { Button } from "./components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
-import { Toaster } from "./components/ui/sonner";
-import { Plus, Trophy, LayoutDashboard, Sparkles, Shuffle, Target, Flame, Zap, TrendingUp } from "lucide-react";
-import { toast } from "sonner@2.0.3";
+import { Plus, Trophy, LayoutDashboard, Sparkles, Target, Flame, Zap, TrendingUp } from "lucide-react";
+import { toast, Toaster } from "sonner";
 
 export type Frequency = "once" | "daily" | "weekly" | "monthly";
 export type ChoreStatus = "pending" | "due-today" | "overdue" | "completed";
@@ -61,7 +60,6 @@ export interface Chore {
   category?: string;
 }
 
-// Mock roommates data
 const mockRoommates: Roommate[] = [
   { id: "1", name: "Alex", avatar: "A", color: "#3b82f6", level: 5, totalPoints: 250, badges: ["early-bird", "plant-whisperer"] },
   { id: "2", name: "Sam", avatar: "S", color: "#8b5cf6", level: 4, totalPoints: 180, badges: ["clean-freak"] },
@@ -69,7 +67,6 @@ const mockRoommates: Roommate[] = [
   { id: "4", name: "Taylor", avatar: "T", color: "#10b981", level: 3, totalPoints: 120, badges: ["newbie"] },
 ];
 
-// Mock chores data
 const initialChores: Chore[] = [
   {
     id: "1",
@@ -98,9 +95,7 @@ const initialChores: Chore[] = [
     assignees: ["2"],
     points: 20,
     completed: false,
-    completions: [
-      { id: "c3", completedBy: "2", completedAt: new Date(2025, 9, 13), points: 20 },
-    ],
+    completions: [{ id: "c3", completedBy: "2", completedAt: new Date(2025, 9, 13), points: 20 }],
     rotationOrder: ["2", "3", "4", "1"],
     reactions: [],
     comments: [],
@@ -120,7 +115,10 @@ const initialChores: Chore[] = [
       { id: "c5", completedBy: "3", completedAt: new Date(2025, 9, 11), points: 15 },
     ],
     rotationOrder: ["3", "4", "1", "2"],
-    reactions: [{ id: "r2", userId: "1", emoji: "✨" }, { id: "r3", userId: "4", emoji: "🎉" }],
+    reactions: [
+      { id: "r2", userId: "1", emoji: "✨" },
+      { id: "r3", userId: "4", emoji: "🎉" },
+    ],
     comments: [],
     category: "cleaning",
   },
@@ -169,7 +167,7 @@ const initialChores: Chore[] = [
   },
 ];
 
-export default function App() {
+export default function Page() {
   const [chores, setChores] = useState<Chore[]>(initialChores);
   const [roommates, setRoommates] = useState<Roommate[]>(mockRoommates);
   const [selectedChore, setSelectedChore] = useState<Chore | null>(null);
@@ -178,10 +176,13 @@ export default function App() {
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isSpinnerOpen, setIsSpinnerOpen] = useState(false);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
-  const [currentUser] = useState<string>("1"); // Current logged in user (Alex)
-  const [filterTab, setFilterTab] = useState<"all" | "mine" | "overdue">("all");
+  const [currentUser] = useState<string>("1");
+  const [frequencyTab, setFrequencyTab] = useState<"all" | "daily" | "weekly" | "monthly">("all");
+  const [statusTab, setStatusTab] = useState<"all" | "mine" | "overdue">("all");
 
-  const handleAddChore = (newChore: Omit<Chore, "id" | "completed" | "completions" | "reactions" | "comments">) => {
+  const handleAddChore = (
+    newChore: Omit<Chore, "id" | "completed" | "completions" | "reactions" | "comments">
+  ) => {
     const chore: Chore = {
       ...newChore,
       id: Date.now().toString(),
@@ -190,105 +191,99 @@ export default function App() {
       reactions: [],
       comments: [],
     };
-    setChores([...chores, chore]);
+    setChores((prev) => [...prev, chore]);
   };
 
   const handleToggleComplete = (choreId: string) => {
-    setChores(chores.map(chore => {
-      if (chore.id === choreId) {
+    setChores((prevChores) =>
+      prevChores.map((chore) => {
+        if (chore.id !== choreId) return chore;
+
         const newCompleted = !chore.completed;
-        
-        // If marking as complete, add to completions
-        if (newCompleted) {
-          const completion: ChoreCompletion = {
-            id: Date.now().toString(),
-            completedBy: currentUser,
-            completedAt: new Date(),
-            points: chore.points,
-          };
+        if (!newCompleted) return { ...chore, completed: false };
 
-          // Update roommate points and check for level up
-          setRoommates(prev => prev.map(rm => {
-            if (rm.id === currentUser) {
-              const newTotalPoints = rm.totalPoints + chore.points;
-              const newLevel = Math.floor(newTotalPoints / 100) + 1;
-              const leveledUp = newLevel > rm.level;
-              
-              if (leveledUp) {
-                toast.success(`🎉 Level Up! You're now level ${newLevel}!`, {
-                  description: `Keep crushing those chores!`,
-                });
-              }
+        const completion: ChoreCompletion = {
+          id: Date.now().toString(),
+          completedBy: currentUser,
+          completedAt: new Date(),
+          points: chore.points,
+        };
 
-              // Check for new badges
-              const newBadges = checkForNewBadges(rm, chores, choreId);
-              
-              return {
-                ...rm,
-                totalPoints: newTotalPoints,
-                level: newLevel,
-                badges: newBadges.length > rm.badges.length ? newBadges : rm.badges,
-              };
+        setRoommates((prev) =>
+          prev.map((rm) => {
+            if (rm.id !== currentUser) return rm;
+            const newTotalPoints = rm.totalPoints + chore.points;
+            const newLevel = Math.floor(newTotalPoints / 100) + 1;
+            const leveledUp = newLevel > rm.level;
+            if (leveledUp) {
+              toast.success(`🎉 Level Up! You're now level ${newLevel}!`, {
+                description: `Keep crushing those chores!`,
+              });
             }
-            return rm;
-          }));
-
-          // Show success toast with points
-          toast.success(`🎉 +${chore.points} points!`, {
-            description: `Great job completing "${chore.title}"!`,
-          });
-          
-          // Handle rotation if it's a recurring chore
-          let updatedChore = { ...chore, completed: newCompleted };
-          if (chore.frequency !== "once" && chore.rotationOrder && chore.rotationOrder.length > 1) {
-            const currentIndex = chore.rotationOrder.indexOf(chore.assignees[0]);
-            const nextIndex = (currentIndex + 1) % chore.rotationOrder.length;
-            const nextAssignee = chore.rotationOrder[nextIndex];
-            
-            // Calculate next due date
-            const nextDueDate = new Date(chore.dueDate);
-            switch (chore.frequency) {
-              case "daily":
-                nextDueDate.setDate(nextDueDate.getDate() + 1);
-                break;
-              case "weekly":
-                nextDueDate.setDate(nextDueDate.getDate() + 7);
-                break;
-              case "monthly":
-                nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-                break;
-            }
-            
-            updatedChore = {
-              ...updatedChore,
-              assignees: [nextAssignee],
-              dueDate: nextDueDate,
-              completed: false,
+            const newBadges = checkForNewBadges(rm, prevChores, choreId);
+            return {
+              ...rm,
+              totalPoints: newTotalPoints,
+              level: newLevel,
+              badges: newBadges.length > rm.badges.length ? newBadges : rm.badges,
             };
+          })
+        );
+
+        toast.success(`🎉 +${chore.points} points!`, {
+          description: `Great job completing "${chore.title}"!`,
+        });
+
+        let updatedChore = { ...chore, completed: true };
+        if (chore.frequency !== "once" && chore.rotationOrder && chore.rotationOrder.length > 1) {
+          const currentIndex = chore.rotationOrder.indexOf(chore.assignees[0]);
+          const nextIndex = (currentIndex + 1) % chore.rotationOrder.length;
+          const nextAssignee = chore.rotationOrder[nextIndex];
+
+          const nextDueDate = new Date(chore.dueDate);
+          switch (chore.frequency) {
+            case "daily":
+              nextDueDate.setDate(nextDueDate.getDate() + 1);
+              break;
+            case "weekly":
+              nextDueDate.setDate(nextDueDate.getDate() + 7);
+              break;
+            case "monthly":
+              nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+              break;
           }
-          
-          return {
+
+          updatedChore = {
             ...updatedChore,
-            completions: [...chore.completions, completion],
+            assignees: [nextAssignee],
+            dueDate: nextDueDate,
+            completed: false,
           };
         }
-        
-        return { ...chore, completed: newCompleted };
-      }
-      return chore;
-    }));
+
+        return {
+          ...updatedChore,
+          completions: [...chore.completions, completion],
+        };
+      })
+    );
   };
 
-  const checkForNewBadges = (roommate: Roommate, allChores: Chore[], completedChoreId: string): string[] => {
+  const checkForNewBadges = (
+    roommate: Roommate,
+    allChores: Chore[],
+    completedChoreId: string
+  ): string[] => {
     const badges = [...roommate.badges];
-    const completedChore = allChores.find(c => c.id === completedChoreId);
-    
-    // Plant Whisperer - complete 3 plant-related chores
+    const completedChore = allChores.find((c) => c.id === completedChoreId);
+
     if (completedChore?.category === "plants") {
       const plantCompletions = allChores
-        .filter(c => c.category === "plants")
-        .reduce((sum, c) => sum + c.completions.filter(comp => comp.completedBy === roommate.id).length, 0);
-      
+        .filter((c) => c.category === "plants")
+        .reduce(
+          (sum, c) => sum + c.completions.filter((comp) => comp.completedBy === roommate.id).length,
+          0
+        );
       if (plantCompletions >= 3 && !badges.includes("plant-whisperer")) {
         badges.push("plant-whisperer");
         toast.success("🌿 Badge Unlocked: Plant Whisperer!", {
@@ -297,9 +292,8 @@ export default function App() {
       }
     }
 
-    // Early Bird - complete 5 chores before due date
-    const earlyCompletions = allChores.filter(c => 
-      c.completions.some(comp => {
+    const earlyCompletions = allChores.filter((c) =>
+      c.completions.some((comp) => {
         if (comp.completedBy !== roommate.id) return false;
         const completedDate = new Date(comp.completedAt);
         const dueDate = new Date(c.dueDate);
@@ -314,18 +308,17 @@ export default function App() {
       });
     }
 
-    // Streak Master - complete chores 7 days in a row
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const date = new Date();
       date.setDate(date.getDate() - i);
       return date.toDateString();
     });
 
-    const hasStreak = last7Days.every(day => 
-      allChores.some(c => 
-        c.completions.some(comp => 
-          comp.completedBy === roommate.id && 
-          new Date(comp.completedAt).toDateString() === day
+    const hasStreak = last7Days.every((day) =>
+      allChores.some((c) =>
+        c.completions.some(
+          (comp) =>
+            comp.completedBy === roommate.id && new Date(comp.completedAt).toDateString() === day
         )
       )
     );
@@ -341,56 +334,47 @@ export default function App() {
   };
 
   const handleAddReaction = (choreId: string, emoji: string) => {
-    setChores(prev => prev.map(chore => {
-      if (chore.id === choreId) {
-        const existingReaction = chore.reactions.find(r => r.userId === currentUser && r.emoji === emoji);
-        if (existingReaction) {
-          return {
-            ...chore,
-            reactions: chore.reactions.filter(r => r.id !== existingReaction.id),
-          };
+    setChores((prev) =>
+      prev.map((chore) => {
+        if (chore.id !== choreId) return chore;
+        const existing = chore.reactions.find((r) => r.userId === currentUser && r.emoji === emoji);
+        if (existing) {
+          return { ...chore, reactions: chore.reactions.filter((r) => r.id !== existing.id) };
         }
         return {
           ...chore,
-          reactions: [...chore.reactions, {
-            id: Date.now().toString(),
-            userId: currentUser,
-            emoji,
-          }],
+          reactions: [...chore.reactions, { id: Date.now().toString(), userId: currentUser, emoji }],
         };
-      }
-      return chore;
-    }));
+      })
+    );
   };
 
   const handleAddComment = (choreId: string, text: string) => {
-    setChores(prev => prev.map(chore => {
-      if (chore.id === choreId) {
-        return {
-          ...chore,
-          comments: [...chore.comments, {
-            id: Date.now().toString(),
-            userId: currentUser,
-            text,
-            timestamp: new Date(),
-          }],
-        };
-      }
-      return chore;
-    }));
+    setChores((prev) =>
+      prev.map((chore) =>
+        chore.id === choreId
+          ? {
+              ...chore,
+              comments: [
+                ...chore.comments,
+                { id: Date.now().toString(), userId: currentUser, text, timestamp: new Date() },
+              ],
+            }
+          : chore
+      )
+    );
     toast.success("Comment added!");
   };
 
   const handleDeleteChore = (choreId: string) => {
-    setChores(chores.filter(chore => chore.id !== choreId));
+    setChores((prev) => prev.filter((chore) => chore.id !== choreId));
     setSelectedChore(null);
   };
 
-  // Calculate stats
-  const currentRoommate = roommates.find(r => r.id === currentUser);
-  const myChores = chores.filter(c => c.assignees.includes(currentUser));
-  const thisWeekCompletions = chores.filter(c => 
-    c.completions.some(comp => {
+  const currentRoommate = roommates.find((r) => r.id === currentUser);
+  const myChores = chores.filter((c) => c.assignees.includes(currentUser));
+  const thisWeekCompletions = chores.filter((c) =>
+    c.completions.some((comp) => {
       const compDate = new Date(comp.completedAt);
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -398,7 +382,6 @@ export default function App() {
     })
   ).length;
 
-  // Calculate streak
   const last30Days = Array.from({ length: 30 }, (_, i) => {
     const date = new Date();
     date.setDate(date.getDate() - i);
@@ -407,40 +390,24 @@ export default function App() {
 
   let currentStreak = 0;
   for (const day of last30Days) {
-    const hasCompletion = chores.some(c => 
-      c.completions.some(comp => 
-        comp.completedBy === currentUser && 
-        new Date(comp.completedAt).toDateString() === day
+    const hasCompletion = chores.some((c) =>
+      c.completions.some(
+        (comp) => comp.completedBy === currentUser && new Date(comp.completedAt).toDateString() === day
       )
     );
-    if (hasCompletion) {
-      currentStreak++;
-    } else {
-      break;
-    }
+    if (hasCompletion) currentStreak++;
+    else break;
   }
 
-  // Count chores by frequency
-  const dailyCount = chores.filter(c => c.frequency === "daily" && !c.completed).length;
-  const weeklyCount = chores.filter(c => c.frequency === "weekly" && !c.completed).length;
-  const monthlyCount = chores.filter(c => c.frequency === "monthly" && !c.completed).length;
+  const dailyCount = chores.filter((c) => c.frequency === "daily" && !c.completed).length;
+  const weeklyCount = chores.filter((c) => c.frequency === "weekly" && !c.completed).length;
+  const monthlyCount = chores.filter((c) => c.frequency === "monthly" && !c.completed).length;
 
-  const [frequencyTab, setFrequencyTab] = useState<"all" | "daily" | "weekly" | "monthly">("all");
-  const [statusTab, setStatusTab] = useState<"all" | "mine" | "overdue">("all");
-
-  // Filter chores by frequency and status
   let filteredChores = chores;
-  
-  // Apply frequency filter
-  if (frequencyTab !== "all") {
-    filteredChores = filteredChores.filter(c => c.frequency === frequencyTab);
-  }
-
-  // Apply status filter
-  if (statusTab === "mine") {
-    filteredChores = filteredChores.filter(c => c.assignees.includes(currentUser));
-  } else if (statusTab === "overdue") {
-    filteredChores = filteredChores.filter(c => {
+  if (frequencyTab !== "all") filteredChores = filteredChores.filter((c) => c.frequency === frequencyTab);
+  if (statusTab === "mine") filteredChores = filteredChores.filter((c) => c.assignees.includes(currentUser));
+  else if (statusTab === "overdue") {
+    filteredChores = filteredChores.filter((c) => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const due = new Date(c.dueDate);
@@ -504,9 +471,7 @@ export default function App() {
             <button
               onClick={() => setFrequencyTab("all")}
               className={`px-4 py-2 rounded-lg text-sm transition-all ${
-                frequencyTab === "all"
-                  ? "bg-slate-100 text-slate-900"
-                  : "text-slate-600 hover:text-slate-900"
+                frequencyTab === "all" ? "bg-slate-100 text-slate-900" : "text-slate-600 hover:text-slate-900"
               }`}
             >
               All
@@ -514,46 +479,32 @@ export default function App() {
             <button
               onClick={() => setFrequencyTab("daily")}
               className={`px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 ${
-                frequencyTab === "daily"
-                  ? "bg-slate-100 text-slate-900"
-                  : "text-slate-600 hover:text-slate-900"
+                frequencyTab === "daily" ? "bg-slate-100 text-slate-900" : "text-slate-600 hover:text-slate-900"
               }`}
             >
               Daily
-              {dailyCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-blue-500 text-white text-xs">
-                  {dailyCount}
-                </span>
-              )}
+              {dailyCount > 0 && <span className="px-2 py-0.5 rounded-full bg-blue-500 text-white text-xs">{dailyCount}</span>}
             </button>
             <button
               onClick={() => setFrequencyTab("weekly")}
               className={`px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 ${
-                frequencyTab === "weekly"
-                  ? "bg-slate-100 text-slate-900"
-                  : "text-slate-600 hover:text-slate-900"
+                frequencyTab === "weekly" ? "bg-slate-100 text-slate-900" : "text-slate-600 hover:text-slate-900"
               }`}
             >
               Weekly
               {weeklyCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-purple-500 text-white text-xs">
-                  {weeklyCount}
-                </span>
+                <span className="px-2 py-0.5 rounded-full bg-purple-500 text-white text-xs">{weeklyCount}</span>
               )}
             </button>
             <button
               onClick={() => setFrequencyTab("monthly")}
               className={`px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 ${
-                frequencyTab === "monthly"
-                  ? "bg-slate-100 text-slate-900"
-                  : "text-slate-600 hover:text-slate-900"
+                frequencyTab === "monthly" ? "bg-slate-100 text-slate-900" : "text-slate-600 hover:text-slate-900"
               }`}
             >
               Monthly
               {monthlyCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-pink-500 text-white text-xs">
-                  {monthlyCount}
-                </span>
+                <span className="px-2 py-0.5 rounded-full bg-pink-500 text-white text-xs">{monthlyCount}</span>
               )}
             </button>
           </div>
@@ -565,9 +516,7 @@ export default function App() {
             <button
               onClick={() => setStatusTab("all")}
               className={`text-sm transition-all pb-2 border-b-2 ${
-                statusTab === "all"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-600 hover:text-slate-900"
+                statusTab === "all" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-600 hover:text-slate-900"
               }`}
             >
               All Status
@@ -575,9 +524,7 @@ export default function App() {
             <button
               onClick={() => setStatusTab("mine")}
               className={`text-sm transition-all pb-2 border-b-2 ${
-                statusTab === "mine"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-600 hover:text-slate-900"
+                statusTab === "mine" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-600 hover:text-slate-900"
               }`}
             >
               My Tasks
@@ -585,9 +532,7 @@ export default function App() {
             <button
               onClick={() => setStatusTab("overdue")}
               className={`text-sm transition-all pb-2 border-b-2 ${
-                statusTab === "overdue"
-                  ? "border-slate-900 text-slate-900"
-                  : "border-transparent text-slate-600 hover:text-slate-900"
+                statusTab === "overdue" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-600 hover:text-slate-900"
               }`}
             >
               Overdue
@@ -595,41 +540,18 @@ export default function App() {
           </div>
 
           <div className="flex gap-2">
-            <Button
-              onClick={() => setIsSummaryOpen(true)}
-              variant="ghost"
-              size="sm"
-              className="text-slate-600"
-            >
-              <Sparkles className="h-4 w-4 mr-1" />
-              AI Summary
-            </Button>
-            <Button
-              onClick={() => setIsDashboardOpen(true)}
-              variant="ghost"
-              size="sm"
-              className="text-slate-600"
-            >
-              <LayoutDashboard className="h-4 w-4 mr-1" />
-              Dashboard
-            </Button>
-            <Button
-              onClick={() => setIsLeaderboardOpen(true)}
-              variant="outline"
-              size="sm"
-              className="border-slate-300"
-            >
-              <Trophy className="h-4 w-4 mr-1 text-amber-600" />
-              Leaderboard
-            </Button>
-            <Button
-              onClick={() => setIsAddDialogOpen(true)}
-              size="sm"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Add Chore
-            </Button>
+            <button onClick={() => setIsSummaryOpen(true)} className="text-slate-600 text-sm px-3 py-2 rounded-lg hover:bg-slate-100">
+              <span className="inline-flex items-center"><Sparkles className="h-4 w-4 mr-1" /> AI Summary</span>
+            </button>
+            <button onClick={() => setIsDashboardOpen(true)} className="text-slate-600 text-sm px-3 py-2 rounded-lg hover:bg-slate-100">
+              <span className="inline-flex items-center"><LayoutDashboard className="h-4 w-4 mr-1" /> Dashboard</span>
+            </button>
+            <button onClick={() => setIsLeaderboardOpen(true)} className="text-sm px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">
+              <span className="inline-flex items-center"><Trophy className="h-4 w-4 mr-1 text-amber-600" /> Leaderboard</span>
+            </button>
+            <button onClick={() => setIsAddDialogOpen(true)} className="text-sm px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white">
+              <span className="inline-flex items-center"><Plus className="h-4 w-4 mr-1" /> Add Chore</span>
+            </button>
           </div>
         </div>
 
@@ -677,7 +599,7 @@ export default function App() {
           onOpenChange={setIsDashboardOpen}
         />
 
-        {/* Leaderboard Dialog */}
+        {/* Leaderboard */}
         <Leaderboard
           chores={chores}
           roommates={roommates}
@@ -687,14 +609,12 @@ export default function App() {
 
         {/* Random Spinner */}
         <RandomSpinner
-          chores={chores.filter(c => !c.completed)}
+          chores={chores.filter((c) => !c.completed)}
           roommates={roommates}
           open={isSpinnerOpen}
           onOpenChange={setIsSpinnerOpen}
           onAssign={(choreId, roommateId) => {
-            setChores(prev => prev.map(c => 
-              c.id === choreId ? { ...c, assignees: [roommateId] } : c
-            ));
+            setChores((prev) => prev.map((c) => (c.id === choreId ? { ...c, assignees: [roommateId] } : c)));
             toast.success("Chore assigned!");
           }}
         />
@@ -708,7 +628,7 @@ export default function App() {
           onOpenChange={setIsSummaryOpen}
         />
 
-        {/* Toast Notifications */}
+        {/* Toast */}
         <Toaster position="top-right" />
       </div>
     </div>

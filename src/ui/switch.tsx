@@ -9,7 +9,7 @@ import { PanelLeft as PanelLeftIcon } from "lucide-react";
 import { useIsMobile } from "./use-mobile";
 import { cn } from "./utils";
 import { Button } from "./button";
-import { Input } from "./input";
+// ⬇️ Removed: import Input from "./input";
 import { Separator } from "./separator";
 import {
   Sheet,
@@ -36,7 +36,6 @@ const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 type SidebarContextProps = {
   state: "expanded" | "collapsed";
   open: boolean;
-  // Use the same type React state setters use:
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
   openMobile: boolean;
   setOpenMobile: React.Dispatch<React.SetStateAction<boolean>>;
@@ -126,7 +125,7 @@ function SidebarProvider({
             } as CSSProperties
           }
           className={cn(
-            "group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full",
+            "group/sidebar-wrapper has-[data-variant=inset]:bg-sidebar flex min-h-svh w-full",
             className,
           )}
           {...props}
@@ -168,7 +167,6 @@ function Sidebar({
   }
 
   if (isMobile) {
-    // Don’t spread random div props into <Sheet>; keep it clean.
     return (
       <Sheet open={openMobile} onOpenChange={setOpenMobile}>
         <SheetContent
@@ -302,12 +300,12 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
   );
 }
 
-function SidebarInput({
-  className,
-  ...props
-}: React.ComponentProps<typeof Input>) {
+/** -------- SidebarInput: inline native input (no external import) -------- */
+type SidebarInputProps = React.InputHTMLAttributes<HTMLInputElement>;
+
+function SidebarInput({ className, ...props }: SidebarInputProps) {
   return (
-    <Input
+    <input
       data-slot="sidebar-input"
       data-sidebar="input"
       className={cn("bg-background h-8 w-full shadow-none", className)}
@@ -315,6 +313,7 @@ function SidebarInput({
     />
   );
 }
+/** ----------------------------------------------------------------------- */
 
 function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -516,7 +515,6 @@ function SidebarMenuButton({
       ? ({ children: tooltip } as React.ComponentProps<typeof TooltipContent>)
       : tooltip;
 
-  // Conditionally render TooltipContent instead of passing `hidden` prop.
   return (
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
