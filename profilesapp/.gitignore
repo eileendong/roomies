@@ -1,9 +1,9 @@
 node_modules
 
 # amplify
-.amplify/
-aws-exports.json.backup
-amplify/.config/local-*
+# .amplify/
+# aws-exports.json.backup
+# amplify/.config/local-*
 
 # Environment files
 .env
